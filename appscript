@@ -1,0 +1,91 @@
+
+// NOTE - BEWARE: INTEREST COLUMNS CANNOT HAVE ' or NEWLINES!!!!!!
+
+const INTERESTLISTSTARTINGROW = 1  // The row where the interests reside
+const INTERESTLISTSTARTINGCOL = 7  // The column where interests end
+const INTERESTCOUNT = 8            // The amount of "interests" 
+
+// DEBUGGING STUFF...
+function printOutput(content) {
+  Browser.msgBox("[DEBUG]" + content + "[DEBUG]");
+}
+
+// Logger.log(menuvalues[0]);
+// for (const col in menuvalues[0]) {
+//   Logger.log(menuvalues[0][col]);
+// }
+// NO MORE DEBUGGING STUFF :)
+
+
+function generateSelection() {  
+  //Courtesy of https://spreadsheet.dev/find-out-which-menu-item-selected-custom-menu-apps-script
+  var caller = generateSelection.caller.toString();
+  var startIndex = caller.indexOf("return") + INTERESTLISTSTARTINGCOL;
+  var endIndex = caller.indexOf("(...arguments);");
+  var callerFunction = caller.slice(startIndex, endIndex);
+
+  // At this point, the user chose a column name and it's something like "Application_Services"
+  // We need to find the column with that name and the ticked emails for that column
+  const headerRowValues = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  
+  // columnIndex is the number of the column, starting from 0...
+  const columnIndex = headerRowValues.indexOf(callerFunction.replace(/_/g,' ')); // I don't like this... but there
+
+  var allcontacts = sheet.getDataRange().getValues()
+
+  // We start on the second row
+  var emaillist = [];
+
+  const ui = SpreadsheetApp.getUi();
+  const emailsubject = ui.prompt("Enter the 'subject:' for the mailout:").getResponseText()
+  // const emailbody = ui.prompt("Enter the body text for the mailout:").getResponseText()  // Only does text, no HTML!
+
+
+  for (var i = 1; i < allcontacts.length; i++) {
+    var row = allcontacts[i];
+
+    if (row[columnIndex] === true) {
+      // Condition met, now select the target cell in this row
+
+      emailaddress =  row[4];   
+      emaillist.push(emailaddress) // We track a list of the email addresses drafted to so we can count them, and who knows what else?
+
+      var recipientfirstname = row[0].trimEnd();
+      var htmlcontent = "<p>Hi " + recipientfirstname + ",<br><br>"; // This has the virtue of changing the email format from plain text to rich text!
+
+      GmailApp.createDraft(
+        emailaddress,
+        emailsubject,
+        "",
+        {
+          htmlBody: htmlcontent 
+        } 
+      )
+    }
+  }
+  Browser.msgBox("AutoEmail has generated " + emaillist.length + " email drafts awaiting sending\\n(Check your Drafts folder in GMail).")
+}
+
+function buildMenu(option) {
+  menu.addItem(option, option.replace(/ /g,'_'));
+}
+
+function onOpen() { 
+  menuvalues.forEach(buildMenu); 
+  menu.addToUi();
+}
+
+// var areasofinterest = ["Platform Services", "Application Services", "Data Science and AI", "Automation and Management", "RHEL", "Security", "TEST1",	"TEST2"];
+// SYNTAX getRange(row, column, numRows, numColumns) ::  https://developers.google.com/apps-script/reference/spreadsheet/sheet#getrangerow,-column,-numrows,-numcolumns
+
+var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+var menuvalues = sheet.getRange(INTERESTLISTSTARTINGROW,INTERESTLISTSTARTINGCOL,1,INTERESTCOUNT).getValues()[0];  
+//getRange(row, column, numRows, numColumns)
+
+var menu = SpreadsheetApp.getUi().createMenu('🚀 Create email from list');
+
+for (let i = 0; i < menuvalues.length; i++)  
+  eval('var ' + menuvalues[i].replace(/ /g,'_') + ' = generateSelection');
+
+
+
