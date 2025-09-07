@@ -2,7 +2,8 @@
 Automatically create email drafts from checkboxed contacts in Google Sheets.<BR>
 
 <B>NOTE:</B><BR>
-☑ The headers must contain an EMAIL address and a FIRST NAME, NAME or FULL NAME columms.<BR>
+☑ The headers must contain a 'FIRST NAME', 'NAME' or 'FULL NAME' column<BR>
+☑ The headers must contain an 'EMAIL' address column<BR>
 ☑ Checkboxes will identify the interest columns, so at least first row of boxes should be fully populated.<BR>
 <BR>
 
