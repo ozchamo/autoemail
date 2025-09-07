@@ -6,6 +6,7 @@ var INTERESTLISTSTARTINGROW = 0  // The row where the interests reside
 var INTERESTLISTSTARTINGCOL = 0  // The column where interests end
 var INTERESTCOUNT = 0;           // How many columns of interest / checkmarks
 var EMAILCOLUMN = 0;             // Column containing the word 'Email' (case insensitive)
+var NAMECOLUMN = 0;              // Where we draw 'Hi <NAME>, from
 
 function findCheckboxColumns() {
   var lastRow = sheet.getLastRow();
@@ -61,7 +62,6 @@ function findCheckboxColumns() {
   if (INTERESTCOUNT == 0) INTERESTCOUNT = col - checkboxcellcolstart + 1;
  
   Logger.log("Interest column count is " + INTERESTCOUNT)
-
   return 0
 }
 
@@ -79,10 +79,48 @@ function findEmailColumn() {
     EMAILCOLUMN=firstResult.getColumn() - 1
     Logger.log("Email column index is " + EMAILCOLUMN);
     return 0
-  } else {
-    Browser.msgBox("'email' column was not found in the sheet. Cannot add AUTOEMAIL menu!");
-    return 1
   }
+  
+  Browser.msgBox("'email' column was not found in the sheet. Cannot add AUTOEMAIL menu!");
+  return 1
+}
+
+
+function findNameColumn() {
+  var textFinder = sheet.createTextFinder('First Name').matchCase(false).matchEntireCell(true);
+  var firstResult = textFinder.findNext();
+  
+  // Check if a result was found and return its location, assign NAMECOLUMN
+  if (firstResult) {
+    // If a cell is found, return its A1 notation (e.g., "C1").
+    NAMECOLUMN=firstResult.getColumn() - 1
+    Logger.log("First name column index is " + NAMECOLUMN);
+    return 0
+  } 
+  
+  // So we didn't find 'First Name' - Now we just try 'Name'
+  var textFinder = sheet.createTextFinder('Name').matchCase(false).matchEntireCell(true);
+  var firstResult = textFinder.findNext();
+  if (firstResult) {
+    // If a cell is found, return its A1 notation (e.g., "C1").
+    NAMECOLUMN=firstResult.getColumn() - 1
+    Logger.log("Name column index is " + NAMECOLUMN);
+    return 0
+  } 
+
+  // So we didn't find 'First Name' or 'Name' - Now we just try 'Full Name'  - last chance...
+  var textFinder = sheet.createTextFinder('Full Name').matchCase(false).matchEntireCell(true);
+  var firstResult = textFinder.findNext();
+  if (firstResult) {
+    // If a cell is found, return its A1 notation (e.g., "C1").
+    NAMECOLUMN=firstResult.getColumn() - 1
+    Logger.log("Full Name column index is " + NAMECOLUMN);
+    return 0
+  } 
+  
+  // No NAME in this sheet that we can use...
+  Browser.msgBox("'First Name', 'Full Name' or 'Name' column was not found in the sheet. Cannot add AUTOEMAIL menu!");
+  return 1
 }
 
 
@@ -121,7 +159,7 @@ function generateSelection() {
       if (emailaddress != "") {
         emaillist.push(emailaddress) // We track a list of the email addresses drafted to so we can count them, and who knows what else?
 
-        var recipientfirstname = row[0].trimEnd();
+        var recipientfirstname = row[NAMECOLUMN].trimEnd();
         var htmlcontent = "<p>Hi " + recipientfirstname + ",<br><br>"; // This has the virtue of changing the email format from plain text to rich text!
 
         GmailApp.createDraft(
@@ -160,8 +198,9 @@ var menuvalues = null;
 
 var resultcb = findCheckboxColumns(); // The count of "interests", also sets INTERESTLISTSTARTINGROW,INTERESTLISTSTARTINGCOL
 var resultec = findEmailColumn(); // sets EMAILCOLUMN
+var resultnc = findNameColumn();  // sets NAMECOLUMN
 
-if (resultcb == 0 && resultec == 0) {
+if (resultcb == 0 && resultec == 0 && resultnc == 0) {
   menuvalues = sheet.getRange(INTERESTLISTSTARTINGROW,INTERESTLISTSTARTINGCOL,1,INTERESTCOUNT).getValues()[0];
   menu = SpreadsheetApp.getUi().createMenu('📩 Create email drafts from list');
     
@@ -173,7 +212,10 @@ if (resultcb == 0 && resultec == 0) {
   menuvalues.forEach(buildMenu); 
   menu.addToUi();
 
-} else Logger.log ("Failed to create menu - findCheckboxColumns returned " + resultcb + " and findEmailColumn returned " + resultec);
-
+} else {
+  if (resultcb != 0) Logger.log ("Failed to create menu - findCheckboxColumns returned " + resultcb)
+  if (resultec != 0) Logger.log ("Failed to create menu - findEmailColumn returned " + resultec);
+  if (resultnc != 0) Logger.log ("Failed to create menu - findNameColumn returned " + resultnc);
+}
 
 
